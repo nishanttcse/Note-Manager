@@ -16,7 +16,7 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async signIn({ user, account, profile }) {
+    async signIn({ user, account }) {
       if (account?.provider === "google" || account?.provider === "github") {
         try {
           await connectDB()
@@ -39,17 +39,23 @@ export const authOptions: NextAuthOptions = {
       }
       return true
     },
-    async session({ session, token }) {
-      if (session.user?.email) {
+    async jwt({ token, user }) {
+      if (user) {
         try {
           await connectDB()
-          const dbUser = await User.findOne({ email: session.user.email })
+          const dbUser = await User.findOne({ email: user.email })
           if (dbUser) {
-            session.user.id = dbUser._id.toString()
+            token.id = dbUser._id.toString()
           }
         } catch (error) {
           console.error("Error fetching user:", error)
         }
+      }
+      return token
+    },
+    async session({ session, token }) {
+      if (token?.id) {
+        session.user.id = token.id as string
       }
       return session
     },
